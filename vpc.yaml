@@ -76,16 +76,16 @@ Resources:
       Tags:
       - Key: Name
         Value: !Join ["-", [ak, AkPubSub1, !Ref EnvParam]]
-  # PubSub2:
-  #   Type: AWS::EC2::Subnet
-  #   Properties:
-  #     VpcId: !Ref VPC
-  #     AvailabilityZone: !Select [1, !GetAZs '']
-  #     CidrBlock: !Ref PublicSubnet2CIDR
-  #     MapPublicIpOnLaunch: true
-  #     Tags:
-  #     - Key: Name
-  #       Value: !Join ["-", [ak, AkPubSub2, !Ref EnvParam]] 
+  PubSub2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, AkPubSub2, !Ref EnvParam]] 
   PrivateSub1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -96,16 +96,16 @@ Resources:
       Tags:
       - Key: Name
         Value: !Join ["-", [ak, AkPrivateSub1, !Ref EnvParam]]
-  # PrivateSub2:
-  #   Type: AWS::EC2::Subnet
-  #   Properties:
-  #     VpcId: !Ref VPC
-  #     AvailabilityZone: !Select [1, !GetAZs '']
-  #     CidrBlock: !Ref PrivateSubnet2CIDR
-  #     MapPublicIpOnLaunch: false
-  #     Tags:
-  #     - Key: Name
-  #       Value: !Join ["-", [ak, AkPrivateSub2, !Ref EnvParam]]
+  PrivateSub2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, AkPrivateSub2, !Ref EnvParam]]
 
   #Public and Private Route Table Creation and route assosication.
   PubRT:
