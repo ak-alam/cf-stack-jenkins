@@ -1,0 +1,185 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: VPC Stack
+Metadata:
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:
+      - 
+        Label: 
+          default: "Your environment name"
+        Parameters: 
+          - EnvParam
+      - 
+        Label: 
+          default: "VPC CIDR"
+        Parameters: 
+          - VpcCIDR
+      - 
+        Label: 
+          default: "Subnet CIDR"
+        Parameters:
+          - PublicSubnet1CIDR
+          # - PublicSubnet2CIDR
+          - PrivateSubnet1CIDR
+          # - PrivateSubnet2CIDR
+
+Parameters:
+  EnvParam:
+    Description: Your environment name
+    Type: String
+
+  VpcCIDR:
+    Default: 10.0.0.0/16
+    Description: Please enter the IP range (CIDR notation) for this VPC
+    Type: String
+
+  PublicSubnet1CIDR:
+    Default: 10.0.1.0/24
+    Description: Please enter the IP range (CIDR notation) for the public subnet 1
+    Type: String
+
+  PublicSubnet2CIDR:
+    Default: 10.0.2.0/24
+    Description: Please enter the IP range (CIDR notation) for the public subnet 2
+    Type: String
+
+  PrivateSubnet1CIDR:
+    Default: 10.0.3.0/24
+    Description: Please enter the IP range (CIDR notation) for the private subnet 1
+    Type: String
+
+  PrivateSubnet2CIDR:
+    Default: 10.0.4.0/24
+    Description: Please enter the IP range (CIDR notation) for the private subnet 2
+    Type: String
+
+
+Resources:
+  #VPC Creation
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, VPC, !Ref EnvParam]]
+
+  #Subnets Creations
+  PubSub1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, AkPubSub1, !Ref EnvParam]]
+  PubSub2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, AkPubSub2, !Ref EnvParam]] 
+  PrivateSub1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, AkPrivateSub1, !Ref EnvParam]]
+  PrivateSub2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [1, !GetAZs '']
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, AkPrivateSub2, !Ref EnvParam]]
+
+  #Public and Private Route Table Creation and route assosication.
+  PubRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [ak, PubRT, !Ref EnvParam]]
+  IGWRoute:
+    Type: AWS::EC2::Route
+    DependsOn: IGWAttachment
+    Properties:
+      RouteTableId: !Ref PubRT
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref IGW        
+  PrivateRT:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [ak, AkPrivateRT, !Ref EnvParam]]
+  NATGWRoute:
+    Type: AWS::EC2::Route
+    DependsOn: NatGW
+    Properties:
+      RouteTableId: !Ref PrivateRT
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NatGW  
+
+  #Internet Gateway and Nat Gateway
+  IGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value:  !Join ["-", [ak, AkPrivateRT, !Ref EnvParam]]
+  IGWAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref IGW
+      VpcId: !Ref VPC
+  NatGW:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGWEIP.AllocationId
+      SubnetId: !Ref PubSub1
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [ak, NatGW, !Ref EnvParam]]
+  NatGWEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
+
+  # Public and private route table subnet associations   
+  PubSub1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PubSub1
+      RouteTableId: !Ref PubRT
+  # PubSub2RTAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     SubnetId: !Ref PubSub2
+  #     RouteTableId: !Ref PubRT
+  PrivateSub1RTAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSub1
+      RouteTableId: !Ref PrivateRT
+  # PrivateSub2RTAssociation:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     SubnetId: !Ref PrivateSub2
+  #     RouteTableId: !Ref PrivateRT
